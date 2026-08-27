@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime logs
+*.log
+wget-log*
+
+# Runtime locks
+*.lock
+
+# Runtime state
+*_state.json
+
+# Python environments
+venv/
+.venv/
+env/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+*.token
+
+# Prometheus binaries
+prometheus/prometheus
+prometheus/promtool
+prometheus/*.tar.gz
+
+# Prometheus runtime data
+prometheus/data/
+prometheus/wal/

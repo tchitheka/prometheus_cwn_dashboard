@@ -1,0 +1,3978 @@
+{
+  "apiVersion": "dashboard.grafana.app/v2",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "cwn-dashboard-v13-2",
+    "namespace": "default",
+    "uid": "5cca13db-0604-405e-99f9-3d7a784d8e95",
+    "resourceVersion": "1787824961860987",
+    "generation": 1,
+    "creationTimestamp": "2026-08-27T10:02:41Z",
+    "labels": {
+      "grafana.app/deprecatedInternalID": "3245472180535296"
+    },
+    "annotations": {
+      "grafana.app/createdBy": "user:cft2tjvq39rswa",
+      "grafana.app/folder": "",
+      "grafana.app/saved-from-ui": "Grafana v13.1.1 (a9cee6e172)"
+    }
+  },
+  "spec": {
+    "annotations": [
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "query": {
+            "kind": "DataQuery",
+            "group": "grafana",
+            "version": "v0",
+            "datasource": {
+              "name": "-- Grafana --"
+            },
+            "spec": {}
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0,211,255,1)",
+          "name": "Annotations & Alerts",
+          "builtIn": true
+        }
+      }
+    ],
+    "cursorSync": "Crosshair",
+    "description": "CWN Network Operations — abstracted AP telemetry. v12 brings AP2 (192.168.1.101, mesh-connected over 802.11s on phy1-mesh0) fully online: 'Node status', 'AP Resource Health', and the station health table are now genuinely parametrized by $ap (job=\"openwrt-$ap-node\"/\"openwrt-$ap-wifi\"), which the v10/v11 description had already announced but the dashboard did not yet implement. Two fixed 'AP1/AP2 status' panels are added alongside the $ap-driven ones so node availability is visible without using the dropdown. New 'Mesh Backhaul' row exposes SNR, signal, and packet-loss on the AP1↔AP2 802.11s link (phy1-mesh0), reported from AP1's side as the canonical, non-duplicated view of the (symmetric) link. v12.1 patch: added job=\"openwrt-ap1-qdisc\" filter to the Network Health Check WiFi-side term and job=\"openwrt-ap1-mesh-qdisc\" filter to the new Mesh Backhaul packet-loss panel, closing a label-collision gap that would have silently summed AP1 and AP2s qdisc series together once AP2s own qdisc exporter went live. v12.1: connected-clients count now sums AP1+AP2 (was AP1-only); added per-node 'Issues — AP1'/'Issues — AP2' triage panels to Operator Actions Needed, counting CPU, memory, link-flap, and qdisc-loss threshold breaches per node. v12.2: 'Issues — AP1'/'Issues — AP2' replaced with a single 'Network Issue Summary' panel switching between three message states via a 25-way composite value mapping. Mesh SNR and Mesh RSSI panels now show a Weak/Fair/Good-style verdict with plain-language narration instead of the raw dB/dBm number, matching the rest of the dashboard's house style (Signal quality, Link stability, etc). v12.3: the four continuous/gradual-fault indicators (QoE RTT, WiFi Channel Saturation, Gateway Bandwidth Saturation, and Signal Quality) now show a sparkline trend alongside their value and colour, so degradation is visible as it develops rather than only once a threshold is crossed — directly targeting the H4 mechanism (gradual faults benefit more from visual prioritisation than discrete ones). QoE RTT and WiFi Channel Saturation were converted from a discretized 0/1/2 verdict to the raw metric with equivalent range-based text mappings, so the same plain-language narration is preserved. Signal Quality (panel-7) has also been RESTORED — it was absent from v12.2 entirely, leaving the 'Wireless signal degradation' task with no panel. v12.3.1 patch: fixed non-exhaustive range mappings on panel-16 and panel-307 that could fall back to displaying a raw unmapped number (observed: a 100,200ms RTT reading fell just outside the old 200-100000ms 'red' band). Panel-307's mapping now also explicitly handles the -1 sentinel link_util.sh writes when no survey data is available, instead of silently showing '-1%'. Restored original legend names (Internet Speed, WiFi Airtime) lost in v12.3. v12.3.2 patch: the v12.3.1 range mappings were structurally invalid — Grafana's RangeMap schema allows exactly one {from,to,result} range per mapping object, not several nested under one object the way value-type mappings work. Rebuilt as a flat list of single-range mapping objects (one per band) on panel-16, panel-307, and panel-7, which is why thresholds (colour) were rendering correctly while the mapped narrative text was silently falling back to the raw number even for in-range values. v12.3.3: fixed the Gateway Bandwidth Saturation stacking bug (reduceOptions.values was true, harmless under the old instant query, but rendered every timestamp as a separate row once converted to a range query for the sparkline). Added AP Resource Health (CPU & Memory) to the continuous-fault sparkline treatment — it was missing from the original categorisation. v12.3.4: Mesh link SNR and Mesh link signal (RSSI) panels now carry the same raw-value-plus-sparkline-plus-range-mapping treatment as the client-facing continuous indicators, rather than the earlier PromQL-discretised verdict pattern. Mesh link packet loss (panel-512) has not yet been converted; flagged for a follow-up pass for consistency. All three mesh backhaul panels (clarity/SNR, strength/RSSI, reliability/packet loss) now carry the same raw-value-plus-sparkline-plus-range-mapping treatment and plain-language labelling as the client-facing continuous indicators. v13: redesigned at-a-glance layout. New Network Health % composite gauge (equal-weighted average of 8 normalised sub-scores; documented as a placeholder for future operator-criticality weighting). New fixed, simultaneously-visible AP1 and AP2 rows, each grouping CPU, Memory, Packet Loss, and Signal Quality for that specific node regardless of the $ap dropdown -- Signal Quality substituted for the originally-sketched 'Latency' cell, since latency has no genuine per-AP measurement in this architecture (only a single shared gateway-wide QoE probe), and no metric was fabricated to fill that slot. Network-wide metrics (QoE latency, DNS health, bandwidth) given their own row. The $ap-templated deep-dive section and all detailed rows (mesh backhaul, traffic, link stability, packet loss/DHCP) from v12.3.5 are preserved below, unchanged, for drill-down. v13.1: each AP's CPU, Memory, Packet Loss, and Link Flaps panels consolidated into a single multi-field combo panel per AP, matching the existing AP Resource Health (CPU & Memory) pattern, with the AP status panel kept as its own separate panel alongside it. The Link Flaps mapping was corrected to be exhaustive as part of this merge.",
+    "editable": true,
+    "elements": {
+      "panel-108": {
+        "kind": "Panel",
+        "spec": {
+          "id": 108,
+          "title": "Top Applications by Data Volume (24 hrs)",
+          "description": "Top applications by data volume, addressing the survey finding that 3/3 operators want per-application data usage visibility, and reflecting the heavy-hitter traffic concentration observed in the CN measurement study (up to 86.8% of volume from 4 applications).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "topk(6, sum by (app_name) (increase(node_app_traffic_bytes_nfstream{job=\"gw-latency\"}[24h])))",
+                        "format": "table",
+                        "instant": true,
+                        "legendFormat": "{{app}}"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "bargauge",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "displayMode": "gradient",
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "maxVizHeight": 300,
+                "minVizHeight": 10,
+                "minVizWidth": 0,
+                "namePlacement": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "limit": 6,
+                  "values": true
+                },
+                "showUnfilled": true,
+                "sizing": "auto",
+                "valueMode": "color"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "decbytes",
+                  "min": 0,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "continuous-BlPu"
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-109": {
+        "kind": "Panel",
+        "spec": {
+          "id": 109,
+          "title": "Total Data Consumption (24hrs)",
+          "description": "Total data consumption (network accounting) alongside how it compares to your expected daily baseline ($avg_daily_consumption_gb, editable dashboard variable). Percentage verdict: green <50%, orange 50-75%, red >=75% of that baseline.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(increase(node_app_traffic_bytes_nfstream{job=\"gw-latency\"}[24h]))",
+                        "instant": true,
+                        "legendFormat": "Data consumed (24h)"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "100 * sum(increase(node_app_traffic_bytes_nfstream{job=\"gw-latency\"}[24h])) / ($avg_daily_consumption_gb * 1000000000)",
+                        "instant": true,
+                        "legendFormat": "% of daily baseline"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "vertical",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": true
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "decbytes",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "blue"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "% of daily baseline"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "percent"
+                      },
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 50
+                            },
+                            {
+                              "color": "red",
+                              "value": 75
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-110": {
+        "kind": "Panel",
+        "spec": {
+          "id": 110,
+          "title": "Gateway Bandwidth Saturation (Upload / Download)",
+          "description": "Internet uplink (WAN) saturation, shown separately for upload and download since this backhaul is asymmetric ($wan_capacity_mbps_up / $wan_capacity_mbps_down, editable dashboard variables). A single combined figure would misrepresent whichever direction has the smaller capacity. Detects the shared, network-wide bottleneck operators specifically flagged in the survey ('no way to know if network has reached capacity') — distinct from radio congestion. High usage here with a clear WiFi Channel verdict points to too many concurrent heavy users or heavy-hitter apps (cf. traffic structure findings) saturating the actual Internet connection, not the local radio. v12.3: sparkline trend added; thresholds and value were already raw. v12.3.3 fix: reduceOptions.values was true (harmless under the old instant query, since only one sample existed). Once switched to a range query for the sparkline, this rendered every sample in the time window as a stacked row instead of one reduced value. Set to false.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "clamp_max((rate(node_network_transmit_bytes_total{job=\"openwrt-ap1-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_up) * 100, 100)",
+                        "instant": false,
+                        "legendFormat": "Upload"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "clamp_max((rate(node_network_receive_bytes_total{job=\"openwrt-ap1-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_down) * 100, 100)",
+                        "instant": false,
+                        "legendFormat": "Download"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "horizontal",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 70,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 90,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-14": {
+        "kind": "Panel",
+        "spec": {
+          "id": 14,
+          "title": "AP Resource Health — CPU & Memory ($ap)",
+          "description": "AP router CPU and memory, each against its own literature-grounded threshold. CPU: 70%/90% (Harchol-Balter; PASTRAMI 2024; Agarwal et al.) -- sustained high CPU on a single-core MIPS AP indicates overload. Memory: 80%/90%, following the Nagios check_mem convention (warning below 20% free, critical below 10% free). v12.3.3: added to the continuous-fault sparkline treatment — device resource exhaustion (CPU/memory climbing toward saturation) is a gradual signal, the same category as QoE RTT, WiFi Channel Saturation, Bandwidth Saturation, and Signal Quality, and had been omitted from the original H4 continuous/discrete categorisation.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "(1 - rate(node_cpu_seconds_total{job=\"openwrt-$ap-node\", mode=\"idle\"}[5m])) * 100",
+                        "instant": false,
+                        "legendFormat": "CPU used %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "(1 - node_memory_MemAvailable_bytes{job=\"openwrt-$ap-node\"} / node_memory_MemTotal_bytes{job=\"openwrt-$ap-node\"}) * 100",
+                        "instant": false,
+                        "legendFormat": "Memory used %"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "vertical",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "min": 0,
+                  "max": 100,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 70,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 90,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Memory used %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 80
+                            },
+                            {
+                              "color": "red",
+                              "value": 90
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-16": {
+        "kind": "Panel",
+        "spec": {
+          "id": 16,
+          "title": "Connection Speed (QoE)",
+          "description": "QoE verdict driven by P90 (tail) latency rather than average RTT, per the CN measurement study finding that tail-latency variability drives user-perceived performance more than mean delay. Thresholds are informed by the baseline-vs-effective RTT divergence observed in the Malawi and South Africa CN traces (indicative — tune per deployment). v12.3: now displays raw P90 RTT (ms) with a sparkline trend, instead of the discretized 0/1/2 verdict, so gradual degradation is visible before it crosses a threshold.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "node_qoe_rtt_p90_ms{job=\"gw-latency\"}",
+                        "instant": false,
+                        "legendFormat": "Internet Speed"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "ms",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 0,
+                        "to": 100,
+                        "result": {
+                          "text": "Good — no action",
+                          "color": "green",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 100,
+                        "to": 200,
+                        "result": {
+                          "text": "Elevated — some users may notice delays",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 200,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Degraded — connection is slow, check for heavy use or contact your provider",
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 100,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 200,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-17": {
+        "kind": "Panel",
+        "spec": {
+          "id": 17,
+          "title": "Name Resolution (DNS Health)",
+          "description": "DNS health verdict from the ratio of failed responses (NXDOMAIN/NOTIMP) to total queries. Grounded in the CN measurement study's finding that DNS failures are heavily concentrated among a small number of destinations — a rising failure ratio points to resolver misconfiguration, upstream reliability issues, or possible DGA/malicious traffic.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "clamp_min(clamp_max(floor((9 - node_dns_failure_ratio{job=\"gw-latency\"} * 100) / 4), 2), 0)",
+                        "instant": true,
+                        "legendFormat": "DNS verdict"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": false
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Resolution failing — check resolver/config",
+                          "color": "red",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Some failures — monitor",
+                          "color": "orange",
+                          "index": 1
+                        },
+                        "2": {
+                          "text": "Stable — no action",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 1,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 2,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-200": {
+        "kind": "Panel",
+        "spec": {
+          "id": 200,
+          "title": "Packet Loss",
+          "description": "Packet loss ratio measured on active QoE probes (iperf/ping-derived) between the gateway and Internet. Elevated loss degrades real-time applications (VoIP, video calls) disproportionately, per operator-reported frustration with 'packet loss' as a regular issue.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "node_qoe_packet_loss_ratio{job=\"gw-latency\"} * 100",
+                        "instant": true,
+                        "legendFormat": "Packet loss %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 1,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 5,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-201": {
+        "kind": "Panel",
+        "spec": {
+          "id": 201,
+          "title": "Jitter",
+          "description": "Inter-packet delay variation on active QoE probes. High jitter degrades VoIP/video call quality even when average latency and loss remain acceptable.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "node_qoe_jitter_ms{job=\"gw-latency\"}",
+                        "instant": true,
+                        "legendFormat": "Jitter"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "ms",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 30,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 100,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-203": {
+        "kind": "Panel",
+        "spec": {
+          "id": 203,
+          "title": "DHCP Pool Available",
+          "description": "Share of the DHCP address pool still available for new clients, from the DHCP lease exporter. Low availability means new devices cannot obtain an IP address — the DHCP allocation failure condition named directly by the Colnodo operator.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "efgf0mwpfm70gb"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "(node_dhcp_pool_size{job=\"dhcp-exporter\"} - node_dhcp_leases_active{job=\"dhcp-exporter\"}) / node_dhcp_pool_size{job=\"dhcp-exporter\"} * 100",
+                        "instant": true,
+                        "legendFormat": "Pool available %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 20,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 40,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-204": {
+        "kind": "Panel",
+        "spec": {
+          "id": 204,
+          "title": "DHCP Health",
+          "description": "DHCP health verdict from remaining pool capacity. A pool nearing exhaustion means the next client to associate will fail to obtain an address — expand the pool or investigate stale leases before this reaches zero.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "efgf0mwpfm70gb"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "clamp_max(floor(((node_dhcp_pool_size{job=\"dhcp-exporter\"} - node_dhcp_leases_active{job=\"dhcp-exporter\"}) / node_dhcp_pool_size{job=\"dhcp-exporter\"} * 100) / 20), 2)",
+                        "instant": true,
+                        "legendFormat": "DHCP verdict"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Pool exhausted — clients failing to obtain IP, expand pool",
+                          "color": "red",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Pool filling — monitor",
+                          "color": "orange",
+                          "index": 1
+                        },
+                        "2": {
+                          "text": "OK — no action",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 1,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 2,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-302": {
+        "kind": "Panel",
+        "spec": {
+          "id": 302,
+          "title": "Link flaps (15m)-($ap)",
+          "description": "AP interface link flap events in the last hour. 0 = stable.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "floor(increase(node_network_carrier_changes_total{job=\"openwrt-$ap-node\", device=\"phy0-ap0\"}[5m]))",
+                        "instant": true,
+                        "legendFormat": "Flaps"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Stable",
+                          "color": "green",
+                          "index": 0
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 1,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 5,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-307": {
+        "kind": "Panel",
+        "spec": {
+          "id": 307,
+          "title": "WiFi Channel Saturation",
+          "description": "Radio medium (airtime) saturation, from channel-busy-time ratio via 'iw survey dump' on the AP itself. Detects contention/interference/retransmission load independent of backhaul usage — e.g. many weak-signal clients can saturate airtime even when the Internet uplink is nearly idle. High airtime use with low Gateway Bandwidth usage points to channel congestion, not an Internet-capacity problem — consider changing channel, reducing channel width, or adding an AP. v12.3: now displays raw channel utilization (%) with a sparkline trend instead of the discretized 0/1/2 verdict.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "node_wifi_link_utilization_percent{job=\"openwrt-ap1-link-util\", device=\"phy0-ap0\"}",
+                        "instant": false,
+                        "legendFormat": "WiFi Airtime"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -1000000000,
+                        "to": 0,
+                        "result": {
+                          "text": "No data — survey unavailable, check exporter",
+                          "color": "text-secondary",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 0,
+                        "to": 33,
+                        "result": {
+                          "text": "Clear",
+                          "color": "green",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 33,
+                        "to": 67,
+                        "result": {
+                          "text": "Busy — monitor",
+                          "color": "orange",
+                          "index": 2
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 67,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Congested — channel busy, investigate interference",
+                          "color": "red",
+                          "index": 3
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 33,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 67,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-501": {
+        "kind": "Panel",
+        "spec": {
+          "id": 501,
+          "title": "Acess Point 1 status ",
+          "description": "Fixed reachability check for ap1, shown independently of the AP Node dropdown so both nodes' availability is visible at a glance without switching. v13.2: added a link to the Node Health Detail view, pre-scoped to AP1 via the var-ap URL parameter.",
+          "links": [
+            {
+              "title": "View AP1 node health details →",
+              "url": "http://100.107.178.36:3000/d/cwn-node-health-detail/node-health-detail?orgId=1&var-ap=ap1",
+              "targetBlank": true
+            }
+          ],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "up{job=\"openwrt-ap1-node\"}",
+                        "instant": true,
+                        "legendFormat": "Node status"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Offline",
+                          "color": "red",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Online",
+                          "color": "green",
+                          "index": 1
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 1,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-502": {
+        "kind": "Panel",
+        "spec": {
+          "id": 502,
+          "title": "Access Point 2 status ",
+          "description": "Fixed reachability check for ap2, shown independently of the AP Node dropdown so both nodes' availability is visible at a glance without switching. v13.2: added a link to the Node Health Detail view, pre-scoped to AP2 via the var-ap URL parameter.",
+          "links": [
+            {
+              "title": "View AP2 node health details →",
+              "url": "http://100.107.178.36:3000/d/cwn-node-health-detail/node-health-detail?orgId=1&var-ap=ap2",
+              "targetBlank": true
+            }
+          ],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "up{job=\"openwrt-ap2-node\"}",
+                        "instant": true,
+                        "legendFormat": "Node status"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "Offline",
+                          "color": "red",
+                          "index": 0
+                        },
+                        "1": {
+                          "text": "Online",
+                          "color": "green",
+                          "index": 1
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 1,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-510": {
+        "kind": "Panel",
+        "spec": {
+          "id": 510,
+          "title": "Mesh link clarity (AP1 ↔ AP2) — SNR",
+          "description": "Verdict derived from raw mesh SNR on phy1-mesh0 (AP1's side, canonical). 0-12.4dB=Weak, 12.5-24.9dB=Fair, >=25dB=Good. v12.3.4 fix: converted from a PromQL-discretised 0/1/2 verdict to the raw SNR value with a sparkline trend and exhaustive range-based text mapping, matching the treatment already applied to client-facing continuous indicators. Was previously excluded from trend treatment on scope grounds (not among the ten Phase Three indicators), not because it is not a genuinely continuous metric. Panel title and inline label renamed to plain-language wording, matching the precedent set by the QoE panel (P90 RTT -> Internet Speed) in v12.3.1; the technical acronym is retained parenthetically in the title for engineers/examiners without being the primary label an operator reads.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "node_wifi_station_snr_db{job=\"openwrt-ap1-wifi\", device=\"phy1-mesh0\"}",
+                        "instant": false,
+                        "legendFormat": "Signal Clarity"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "dB",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -1000000000,
+                        "to": 12.5,
+                        "result": {
+                          "text": "Weak — check alignment or interference",
+                          "color": "red",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 12.5,
+                        "to": 25,
+                        "result": {
+                          "text": "Fair — monitor, may need attention soon",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 25,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Good — no action needed",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 12.5,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 25,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-511": {
+        "kind": "Panel",
+        "spec": {
+          "id": 511,
+          "title": "Mesh link strength (AP1 ↔ AP2) — RSSI",
+          "description": "Verdict derived from raw mesh RSSI on phy1-mesh0 (AP1's side, canonical). <=-90dBm=Weak, -89 to -71dBm=Moderate, >=-70dBm=Strong. v12.3.4 fix: converted from a PromQL-discretised 0/1/2 verdict to the raw RSSI value with a sparkline trend and exhaustive range-based text mapping, for the same reason as panel-510. Panel title and inline label renamed to plain-language wording, matching the precedent set by the QoE panel (P90 RTT -> Internet Speed) in v12.3.1; the technical acronym is retained parenthetically in the title for engineers/examiners without being the primary label an operator reads.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "node_wifi_station_signal_dbm{job=\"openwrt-ap1-wifi\", device=\"phy1-mesh0\"}",
+                        "instant": false,
+                        "legendFormat": "Signal Strength"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "dBm",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -1000000000,
+                        "to": -70,
+                        "result": {
+                          "text": "Weak — link may become unstable",
+                          "color": "red",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -70,
+                        "to": -50,
+                        "result": {
+                          "text": "Moderate — usable, keep an eye on it",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -50,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Strong — no action needed",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": -70,
+                        "color": "orange"
+                      },
+                      {
+                        "value": -50,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-512": {
+        "kind": "Panel",
+        "spec": {
+          "id": 512,
+          "title": "Mesh link reliability (AP1 ↔ AP2) — Packet Loss",
+          "description": "Drop-to-attempted-packet ratio on the mesh backhaul interface phy1-mesh0, using the same qdisc-based formula as the existing Network Health Check's Wi-Fi-side term, retargeted from phy0-ap0 to phy1-mesh0. If AP2 loses backhaul, clients still associated to AP2 lose Internet access even though AP2 itself may still show 'Online.' [v12.1: now reads from the dedicated wifi_qdisc_health_mesh.sh / job=\"openwrt-ap1-mesh-qdisc\" scrape target, not the AP-facing qdisc job.] v12.3.4 fix: brought in line with panel-510/panel-511 -- added a sparkline trend (graphMode area, range query), exhaustive range-based narrative mapping reusing the same 2.5%/5% packet-loss thresholds already established for the client-facing Connection Reliability panel, and a plain-language title/label, closing the asymmetry left when SNR and RSSI were fixed first.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "100 * rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap1-mesh-qdisc\", device=\"phy1-mesh0\"}[5m]) / clamp_min(rate(node_wifi_qdisc_sent_packets_total{job=\"openwrt-ap1-mesh-qdisc\", device=\"phy1-mesh0\"}[5m]) + rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap1-mesh-qdisc\", device=\"phy1-mesh0\"}[5m]), 1)",
+                        "instant": false,
+                        "legendFormat": "Link Reliability"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 0,
+                        "to": 2.5,
+                        "result": {
+                          "text": "Reliable — no action needed",
+                          "color": "green",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 2.5,
+                        "to": 5,
+                        "result": {
+                          "text": "Degraded — some packets being dropped, monitor",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 5,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Unreliable — mesh link dropping significant traffic",
+                          "color": "red",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 2.5,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 5,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-700": {
+        "kind": "Panel",
+        "spec": {
+          "id": 700,
+          "title": "Network Health %",
+          "description": "The Network Health % (Composite Network Health Score, CNHS) is a normalised 0-100 index representing the overall operational health of the network from the operator perspective. Computed as an equally-weighted average of four category sub-scores -- Resource Health (CPU, Memory), Reliability (Packet Loss, DNS failure ratio, Link Flaps), Performance (QoE latency, Bandwidth saturation, Wireless airtime), and Signal Quality (SNR) -- each derived from engineering-threshold-normalised component metrics. Subject to a non-compensatory reachability guardrail: if either AP is unreachable, the score is capped at 30, placing it firmly within the Critical band (0-49) regardless of how healthy other categories appear. Bands: Healthy 80-100 (green), Degraded 50-79 (orange), Critical 0-49 (red). Category weights are currently equal (25% each) as a documented placeholder pending operator-derived (AHP) weighting. v13.2: added Link Flaps as a third Reliability sub-metric (goalpost-normalised 0=stable to 5=critical, matching the existing discrete flap bands shown on the AP combo panels).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "(((0.25 * (((clamp_min(clamp_max((90 - (avg((1 - rate(node_cpu_seconds_total{job=~\"openwrt-ap(1|2)-node\", mode=\"idle\"}[5m])) * 100) or vector(50))) / (90 - 70), 1), 0) * 100) + (clamp_min(clamp_max((90 - (avg((1 - node_memory_MemAvailable_bytes{job=~\"openwrt-ap(1|2)-node\"} / node_memory_MemTotal_bytes{job=~\"openwrt-ap(1|2)-node\"}) * 100) or vector(50))) / (90 - 70), 1), 0) * 100)) / 2) + 0.25 * (((clamp_min(clamp_max((5 - (avg(100 * rate(node_wifi_qdisc_dropped_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]) / clamp_min(rate(node_wifi_qdisc_sent_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]) + rate(node_wifi_qdisc_dropped_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]), 1)) or vector(0))) / (5 - 2.5), 1), 0) * 100) + (clamp_min(clamp_max((5 - (avg(node_dns_failure_ratio{job=\"gw-latency\"} * 100) or vector(0))) / (5 - 1), 1), 0) * 100) + (clamp_min(clamp_max((5 - (avg(floor(increase(node_network_carrier_changes_total{job=~\"openwrt-ap(1|2)-node\", device=\"phy0-ap0\"}[5m]))) or vector(0))) / (5 - 0), 1), 0) * 100)) / 3) + 0.25 * (((clamp_min(clamp_max((200 - (avg(node_qoe_rtt_p90_ms) or vector(100))) / (200 - 100), 1), 0) * 100) + (clamp_min(clamp_max((90 - (avg((clamp_max((rate(node_network_transmit_bytes_total{job=~\"openwrt-ap(1|2)-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_up) * 100, 100) + clamp_max((rate(node_network_receive_bytes_total{job=~\"openwrt-ap(1|2)-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_down) * 100, 100)) / 2) or vector(0))) / (90 - 70), 1), 0) * 100) + (clamp_min(clamp_max((66 - (avg(node_wifi_link_utilization_percent{job=~\"openwrt-ap(1|2)-link-util\", device=\"phy0-ap0\"}) or vector(0))) / (66 - 33), 1), 0) * 100)) / 3) + 0.25 * ((clamp_min(clamp_max(((avg(min by (job) (node_wifi_station_snr_db{job=~\"openwrt-ap(1|2)-wifi\", device=\"phy0-ap0\"})) or vector(20)) - 10) / (25 - 10), 1), 0) * 100)))) - clamp_min(((0.25 * (((clamp_min(clamp_max((90 - (avg((1 - rate(node_cpu_seconds_total{job=~\"openwrt-ap(1|2)-node\", mode=\"idle\"}[5m])) * 100) or vector(50))) / (90 - 70), 1), 0) * 100) + (clamp_min(clamp_max((90 - (avg((1 - node_memory_MemAvailable_bytes{job=~\"openwrt-ap(1|2)-node\"} / node_memory_MemTotal_bytes{job=~\"openwrt-ap(1|2)-node\"}) * 100) or vector(50))) / (90 - 70), 1), 0) * 100)) / 2) + 0.25 * (((clamp_min(clamp_max((5 - (avg(100 * rate(node_wifi_qdisc_dropped_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]) / clamp_min(rate(node_wifi_qdisc_sent_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]) + rate(node_wifi_qdisc_dropped_packets_total{job=~\"openwrt-ap(1|2)-qdisc\", device=\"phy0-ap0\"}[5m]), 1)) or vector(0))) / (5 - 2.5), 1), 0) * 100) + (clamp_min(clamp_max((5 - (avg(node_dns_failure_ratio{job=\"gw-latency\"} * 100) or vector(0))) / (5 - 1), 1), 0) * 100) + (clamp_min(clamp_max((5 - (avg(floor(increase(node_network_carrier_changes_total{job=~\"openwrt-ap(1|2)-node\", device=\"phy0-ap0\"}[5m]))) or vector(0))) / (5 - 0), 1), 0) * 100)) / 3) + 0.25 * (((clamp_min(clamp_max((200 - (avg(node_qoe_rtt_p90_ms) or vector(100))) / (200 - 100), 1), 0) * 100) + (clamp_min(clamp_max((90 - (avg((clamp_max((rate(node_network_transmit_bytes_total{job=~\"openwrt-ap(1|2)-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_up) * 100, 100) + clamp_max((rate(node_network_receive_bytes_total{job=~\"openwrt-ap(1|2)-node\", device=\"eth0\"}[5m]) * 8 / 1000000 / $wan_capacity_mbps_down) * 100, 100)) / 2) or vector(0))) / (90 - 70), 1), 0) * 100) + (clamp_min(clamp_max((66 - (avg(node_wifi_link_utilization_percent{job=~\"openwrt-ap(1|2)-link-util\", device=\"phy0-ap0\"}) or vector(0))) / (66 - 33), 1), 0) * 100)) / 3) + 0.25 * ((clamp_min(clamp_max(((avg(min by (job) (node_wifi_station_snr_db{job=~\"openwrt-ap(1|2)-wifi\", device=\"phy0-ap0\"})) or vector(20)) - 10) / (25 - 10), 1), 0) * 100)))) - (clamp_min(clamp_max(((avg(up{job=~\"openwrt-ap(1|2)-node\"}) or vector(0)) - 0.999) * 1000000, 1), 0) * 70 + 30), 0))",
+                        "instant": true,
+                        "legendFormat": "Network Health"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "gauge",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "barShape": "flat",
+                "barWidthFactor": 0.5,
+                "effects": {
+                  "barGlow": false,
+                  "centerGlow": false,
+                  "gradient": true
+                },
+                "endpointMarker": "point",
+                "minVizHeight": 0,
+                "minVizWidth": 0,
+                "orientation": "auto",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "segmentCount": 1,
+                "segmentSpacing": 0.3,
+                "shape": "gauge",
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "sizing": "auto",
+                "sparkline": true,
+                "textMode": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "decimals": 0,
+                  "min": 0,
+                  "max": 100,
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 50,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 80,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-701": {
+        "kind": "Panel",
+        "spec": {
+          "id": 701,
+          "title": "Gateway Packet Loss",
+          "description": "Packet loss ratio measured on active QoE probes (iperf/ping-derived) between the gateway and Internet. Elevated loss degrades real-time applications (VoIP, video calls) disproportionately, per operator-reported frustration with 'packet loss' as a regular issue.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "node_qoe_packet_loss_ratio{job=\"gw-latency\"} * 100",
+                        "instant": true,
+                        "legendFormat": "Packet loss %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 1,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 5,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-702": {
+        "kind": "Panel",
+        "spec": {
+          "id": 702,
+          "title": "Signal quality (ap1)",
+          "description": "Fixed to AP1. Substituted for 'Latency' from the original sketch, since latency is only measured once, gateway-wide, and has no genuine per-AP equivalent in this architecture; signal quality IS a genuine per-AP metric.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "min(node_wifi_station_snr_db{job=\"openwrt-ap1-wifi\", device=\"phy0-ap0\"})",
+                        "instant": false,
+                        "legendFormat": "Min SNR"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "dB",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -1000000000,
+                        "to": 12.5,
+                        "result": {
+                          "text": "Poor — check antenna alignment or interference",
+                          "color": "red",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 12.5,
+                        "to": 25,
+                        "result": {
+                          "text": "Fair — monitor",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 25,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Good — no action needed",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 12.5,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 25,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-703": {
+        "kind": "Panel",
+        "spec": {
+          "id": 703,
+          "title": "Signal quality (ap2)",
+          "description": "Fixed to AP2. Substituted for 'Latency' from the original sketch, since latency is only measured once, gateway-wide, and has no genuine per-AP equivalent in this architecture; signal quality IS a genuine per-AP metric.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "min(node_wifi_station_snr_db{job=\"openwrt-ap2-wifi\", device=\"phy0-ap0\"})",
+                        "instant": false,
+                        "legendFormat": "Min SNR"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "dB",
+                  "mappings": [
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": -1000000000,
+                        "to": 12.5,
+                        "result": {
+                          "text": "Poor — check antenna alignment or interference",
+                          "color": "red",
+                          "index": 0
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 12.5,
+                        "to": 25,
+                        "result": {
+                          "text": "Fair — monitor",
+                          "color": "orange",
+                          "index": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "range",
+                      "options": {
+                        "from": 25,
+                        "to": 1000000000,
+                        "result": {
+                          "text": "Good — no action needed",
+                          "color": "green",
+                          "index": 2
+                        }
+                      }
+                    }
+                  ],
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "red"
+                      },
+                      {
+                        "value": 12.5,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 25,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-711": {
+        "kind": "Panel",
+        "spec": {
+          "id": 711,
+          "title": "AP1 Resource Health — CPU, Memory, Packet Loss & Link Flaps",
+          "description": "Consolidated combo panel replacing the four separate CPU/Memory/Packet-loss/Link-flaps panels for AP1, following the same multi-field Stat panel pattern already used by the AP Resource Health (CPU & Memory) deep-dive panel. Each field keeps its own unit, thresholds, and narrative mapping via a byName override, matched against that field's legend label. The Link Flaps mapping was also converted from a single, non-exhaustive value mapping (0 -> \"Stable\" only) to an exhaustive range mapping covering all flap counts, while merging.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "(1 - rate(node_cpu_seconds_total{job=\"openwrt-ap1-node\", mode=\"idle\"}[5m])) * 100",
+                        "instant": false,
+                        "legendFormat": "CPU used %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "(1 - node_memory_MemAvailable_bytes{job=\"openwrt-ap1-node\"} / node_memory_MemTotal_bytes{job=\"openwrt-ap1-node\"}) * 100",
+                        "instant": false,
+                        "legendFormat": "Memory used %"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "100 * rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap1-qdisc\", device=\"phy0-ap0\"}[5m]) / clamp_min(rate(node_wifi_qdisc_sent_packets_total{job=\"openwrt-ap1-qdisc\", device=\"phy0-ap0\"}[5m]) + rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap1-qdisc\", device=\"phy0-ap0\"}[5m]), 1)",
+                        "instant": false,
+                        "legendFormat": "Packet loss %"
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "floor(increase(node_network_carrier_changes_total{job=\"openwrt-ap1-node\", device=\"phy0-ap0\"}[5m]))",
+                        "instant": true,
+                        "legendFormat": "Flaps"
+                      }
+                    },
+                    "refId": "D",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "vertical",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "CPU used %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 70
+                            },
+                            {
+                              "color": "red",
+                              "value": 90
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "CPU healthy — no action"
+                              },
+                              "to": 70
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 70,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "CPU elevated — monitor"
+                              },
+                              "to": 90
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 90,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "CPU critical — investigate load"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Memory used %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 70
+                            },
+                            {
+                              "color": "red",
+                              "value": 90
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Memory healthy — no action"
+                              },
+                              "to": 70
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 70,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Memory elevated — monitor"
+                              },
+                              "to": 90
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 90,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Memory critical — investigate load"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Packet loss %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 2.5
+                            },
+                            {
+                              "color": "red",
+                              "value": 5
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Reliable — no action needed"
+                              },
+                              "to": 2.5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 2.5,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Degraded — some packets dropped, monitor"
+                              },
+                              "to": 5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 5,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Unreliable — significant packet loss"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Flaps"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "short"
+                      },
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 1
+                            },
+                            {
+                              "color": "red",
+                              "value": 5
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Stable"
+                              },
+                              "to": 1
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 1,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Flapping — monitor"
+                              },
+                              "to": 5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 5,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Unstable — investigate"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-712": {
+        "kind": "Panel",
+        "spec": {
+          "id": 712,
+          "title": "AP2 Resource Health — CPU, Memory, Packet Loss & Link Flaps",
+          "description": "Consolidated combo panel replacing the four separate CPU/Memory/Packet-loss/Link-flaps panels for AP2, following the same multi-field Stat panel pattern already used by the AP Resource Health (CPU & Memory) deep-dive panel. Each field keeps its own unit, thresholds, and narrative mapping via a byName override, matched against that field's legend label. The Link Flaps mapping was also converted from a single, non-exhaustive value mapping (0 -> \"Stable\" only) to an exhaustive range mapping covering all flap counts, while merging.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "(1 - rate(node_cpu_seconds_total{job=\"openwrt-ap2-node\", mode=\"idle\"}[5m])) * 100",
+                        "instant": false,
+                        "legendFormat": "CPU used %"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "(1 - node_memory_MemAvailable_bytes{job=\"openwrt-ap2-node\"} / node_memory_MemTotal_bytes{job=\"openwrt-ap2-node\"}) * 100",
+                        "instant": false,
+                        "legendFormat": "Memory used %"
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "100 * rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap2-qdisc\", device=\"phy0-ap0\"}[5m]) / clamp_min(rate(node_wifi_qdisc_sent_packets_total{job=\"openwrt-ap2-qdisc\", device=\"phy0-ap0\"}[5m]) + rate(node_wifi_qdisc_dropped_packets_total{job=\"openwrt-ap2-qdisc\", device=\"phy0-ap0\"}[5m]), 1)",
+                        "instant": false,
+                        "legendFormat": "Packet loss %"
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "expr": "floor(increase(node_network_carrier_changes_total{job=\"openwrt-ap2-node\", device=\"phy0-ap0\"}[5m]))",
+                        "instant": true,
+                        "legendFormat": "Flaps"
+                      }
+                    },
+                    "refId": "D",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "vertical",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value_and_name",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "percent",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "N/A"
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "CPU used %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 70
+                            },
+                            {
+                              "color": "red",
+                              "value": 90
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "CPU healthy — no action"
+                              },
+                              "to": 70
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 70,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "CPU elevated — monitor"
+                              },
+                              "to": 90
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 90,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "CPU critical — investigate load"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Memory used %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 70
+                            },
+                            {
+                              "color": "red",
+                              "value": 90
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Memory healthy — no action"
+                              },
+                              "to": 70
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 70,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Memory elevated — monitor"
+                              },
+                              "to": 90
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 90,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Memory critical — investigate load"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Packet loss %"
+                    },
+                    "properties": [
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 2.5
+                            },
+                            {
+                              "color": "red",
+                              "value": 5
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Reliable — no action needed"
+                              },
+                              "to": 2.5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 2.5,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Degraded — some packets dropped, monitor"
+                              },
+                              "to": 5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 5,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Unreliable — significant packet loss"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "Flaps"
+                    },
+                    "properties": [
+                      {
+                        "id": "unit",
+                        "value": "short"
+                      },
+                      {
+                        "id": "thresholds",
+                        "value": {
+                          "mode": "absolute",
+                          "steps": [
+                            {
+                              "color": "green",
+                              "value": 0
+                            },
+                            {
+                              "color": "orange",
+                              "value": 1
+                            },
+                            {
+                              "color": "red",
+                              "value": 5
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "options": {
+                              "from": 0,
+                              "result": {
+                                "color": "green",
+                                "index": 0,
+                                "text": "Stable"
+                              },
+                              "to": 1
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 1,
+                              "result": {
+                                "color": "orange",
+                                "index": 1,
+                                "text": "Flapping — monitor"
+                              },
+                              "to": 5
+                            },
+                            "type": "range"
+                          },
+                          {
+                            "options": {
+                              "from": 5,
+                              "result": {
+                                "color": "red",
+                                "index": 2,
+                                "text": "Unstable — investigate"
+                              },
+                              "to": 1000000000
+                            },
+                            "type": "range"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "panel-713": {
+        "kind": "Panel",
+        "spec": {
+          "id": 713,
+          "title": "Connected Devices",
+          "description": "Total stations associated across both nodes' client-facing radios. v12.1: previously only counted AP1. v12.3.5 fix: deduplicated by mac label before counting. A client roaming between AP1 and AP2, both broadcasting the same SSID with no coordinated fast-roaming, can remain associated on the previous AP until its inactivity timeout expires, causing one physical device to appear as two rows across the two per-AP jobs. Grouping by mac first collapses this to a genuine unique-device count; per-AP station tables are left unchanged since they accurately reflect each AP's own association state.",
+          "links": [
+            {
+              "title": "Connected Devices Details",
+              "url": "http://100.107.178.36:3000/d/cwn-connected-devices-detail/connected-devices-detail?orgId=1",
+              "targetBlank": true
+            }
+          ],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "bft3lwqxbl2psc"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "count(count by (mac) (node_wifi_station_signal_dbm{job=~\"openwrt-ap1-wifi|openwrt-ap2-wifi\", device=\"phy0-ap0\"})) or vector(0)",
+                        "instant": true,
+                        "legendFormat": "Clients"
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.1.1",
+            "spec": {
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 1,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds",
+                    "fixedColor": "#ad46ff"
+                  },
+                  "noValue": "0"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "layout": {
+      "kind": "RowsLayout",
+      "spec": {
+        "rows": [
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🩺 Overall Network Health",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 12,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-700"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 19,
+                        "y": 0,
+                        "width": 4,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-713"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "📡 AP1 -- Node Health",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-501"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 18,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-711"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "📡 AP2 -- Node Health",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-502"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 18,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-712"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🌐 Internet & DNS Quality (Network-Wide)",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-16"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-17"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-110"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 18,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-701"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🌐🔗  Mesh Backhaul — AP1 ↔ AP2 Link Quality",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-510"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-511"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-512"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "📊  Traffic Structure & Application Usage",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 13,
+                        "height": 7,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-108"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 15,
+                        "y": 0,
+                        "width": 8,
+                        "height": 7,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-109"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🔗  Link Stability & AP Health",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 0,
+                        "width": 12,
+                        "height": 7,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-14"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🌐  QoE & DNS Health — Traffic-Layer Monitoring",
+              "collapse": true,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 10,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-16"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 0,
+                        "width": 11,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-17"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "🚦  Packet Loss, Jitter & DHCP Health",
+              "collapse": true,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 4,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-200"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 4,
+                        "y": 0,
+                        "width": 4,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-201"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 14,
+                        "y": 0,
+                        "width": 4,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-203"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 18,
+                        "y": 0,
+                        "width": 6,
+                        "height": 6,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-204"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 6,
+                        "width": 5,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-702"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 5,
+                        "y": 6,
+                        "width": 5,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-703"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 10,
+                        "y": 6,
+                        "width": 6,
+                        "height": 7,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-302"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 16,
+                        "y": 6,
+                        "width": 6,
+                        "height": 7,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-307"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "links": [],
+    "liveNow": false,
+    "preload": false,
+    "tags": [],
+    "timeSettings": {
+      "timezone": "browser",
+      "from": "now-5m",
+      "to": "now",
+      "autoRefresh": "auto",
+      "autoRefreshIntervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "hideTimepicker": false,
+      "fiscalYearStartMonth": 0
+    },
+    "title": "CWN Network Operations Dashboard v13.2",
+    "variables": [
+      {
+        "kind": "IntervalVariable",
+        "spec": {
+          "name": "interval",
+          "query": "1m,5m,15m,1h",
+          "current": {
+            "text": "5m",
+            "value": "5m"
+          },
+          "options": [
+            {
+              "selected": false,
+              "text": "1m",
+              "value": "1m"
+            },
+            {
+              "selected": true,
+              "text": "5m",
+              "value": "5m"
+            },
+            {
+              "selected": false,
+              "text": "15m",
+              "value": "15m"
+            },
+            {
+              "selected": false,
+              "text": "1h",
+              "value": "1h"
+            }
+          ],
+          "auto": true,
+          "auto_min": "10s",
+          "auto_count": 30,
+          "refresh": "onTimeRangeChanged",
+          "label": "Interval",
+          "hide": "dontHide",
+          "skipUrlSync": false
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "wan_capacity_mbps_up",
+          "current": {
+            "text": "5",
+            "value": "5"
+          },
+          "query": "5",
+          "label": "WAN Upload Capacity (Mbps)",
+          "hide": "dontHide",
+          "skipUrlSync": false,
+          "description": "Known Internet uplink capacity in Mbps (upload direction). Set to your actual backhaul plan speed. Split from download capacity because this backhaul is asymmetric."
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "wan_capacity_mbps_down",
+          "current": {
+            "text": "10",
+            "value": "10"
+          },
+          "query": "10",
+          "label": "WAN Download Capacity (Mbps)",
+          "hide": "dontHide",
+          "skipUrlSync": false,
+          "description": "Known Internet downlink capacity in Mbps (download direction). Set to your actual backhaul plan speed. Split from upload capacity because this backhaul is asymmetric."
+        }
+      },
+      {
+        "kind": "TextVariable",
+        "spec": {
+          "name": "avg_daily_consumption_gb",
+          "current": {
+            "text": "20",
+            "value": "20"
+          },
+          "query": "20",
+          "label": "Avg Daily Data Consumption (GB)",
+          "hide": "dontHide",
+          "skipUrlSync": false,
+          "description": "Expected average daily data consumption in GB. Used as the baseline the Data Consumption panel's percentage verdict is measured against (green <50%, orange 50-75%, red >=75%)."
+        }
+      },
+      {
+        "kind": "CustomVariable",
+        "spec": {
+          "name": "ap",
+          "query": "ap1,ap2",
+          "current": {
+            "text": "ap1",
+            "value": "ap1"
+          },
+          "options": [],
+          "multi": false,
+          "includeAll": false,
+          "label": "AP Node",
+          "hide": "dontHide",
+          "skipUrlSync": false,
+          "description": "AP node selector. 'Network at a Glance' (deep-dive panel), 'AP Resource Health', and the station health table now use $ap as of v12. The Mesh Backhaul row is intentionally NOT gated by $ap, since it shows one link between both nodes, not a per-node metric.",
+          "allowCustomValue": true,
+          "valuesFormat": "csv"
+        }
+      }
+    ]
+  }
+}

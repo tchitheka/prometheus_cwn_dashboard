@@ -1,0 +1,152 @@
+# my global config
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+           - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+    - "prometheus_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+    honor_labels: true
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ["localhost:9090"]
+       # The label name is added as a label `label_name=<label_value>` to any timeseries scraped from this config.
+        labels:
+          app: "prometheus"
+            # - targets: ["localhost:9100"]
+       # The label name is added as a label `label_name=<label_value>` to any timeseries scraped from this config.
+       # labels:
+       #  app: "node-exporter"
+      - targets: ['localhost:8000']
+        labels:
+          app:  "Internet_conn"
+
+  - job_name: "dns_probe"
+    metrics_path: /probe
+    params:
+      module: [dns_tcp]
+    static_configs:
+      - targets:  ["8.8.8.8"]
+    relabel_configs:
+      - source_labels: [_address_]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: "localhost:8002"
+
+  - job_name: "internet_ping"
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: ["8.8.8.8"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: "localhost:8002"
+
+
+  - job_name: "wan"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["localhost:8002"]
+
+
+
+
+  - job_name: "ap_nodes"
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - "ap-node-1.local:9100"
+          - "ap-node-2.local:9100"
+          - "ap-node-3.local:9100"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: node
+        regex: "([^.]+)\\..*"
+
+  
+  - job_name: 'openwrt-ap1-node'
+    static_configs:
+      - targets: ['192.168.1.100:9100']
+    scrape_interval: 30s
+
+  - job_name: 'openwrt-ap1-wifi'
+    metrics_path: /wifi_stations.prom
+    static_configs:
+      - targets: ['192.168.1.100:9101']
+    scrape_interval: 30s
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: 'gw-latency'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 30s
+
+  - job_name: "openwrt-ap1-link-util"
+    metrics_path: /link_util.prom
+    static_configs:
+    - targets: ["192.168.1.100:9101"]
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: "openwrt-ap1-wifi-qdisc"
+    metrics_path: /wifi_qdisc_health.prom
+    static_configs:
+      - targets: ["192.168.1.100:9101"]
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: 'openwrt-ap1-qdisc'
+    static_configs:
+      - targets: ['192.168.1.100:9101']
+    metrics_path: /wifi_qdisc_health.prom
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: 'openwrt-ap2-qdisc'          # once AP2 runs its own copy of wifi_qdisc_health.sh
+    static_configs:
+      - targets: ['192.168.1.101:9101']
+    metrics_path: /wifi_qdisc_health.prom
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: 'openwrt-ap1-mesh-qdisc'     # AP1 only — canonical side of the mesh link
+    static_configs:
+      - targets: ['192.168.1.100:9101']
+    metrics_path: /wifi_qdisc_health_mesh.prom
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+###############################
+
+  - job_name: 'openwrt-ap2-node'
+    static_configs:
+      - targets: ['192.168.1.101:9100']
+
+  - job_name: 'openwrt-ap2-wifi'
+    static_configs:
+      - targets: ['192.168.1.101:9101']
+    metrics_path: /wifi_stations.prom
+    fallback_scrape_protocol: PrometheusText0.0.4
+
+  - job_name: 'openwrt-ap2-link-util'
+    static_configs:
+      - targets: ['192.168.1.101:9101']
+    metrics_path: /link_util.prom
+    fallback_scrape_protocol: PrometheusText0.0.4
+
