@@ -67,7 +67,10 @@ REMOTE_TARGET="${3:-}"
 
 MAXLOAD_THRESHOLD_PCT=95
 LOGFILE="/tmp/cpufill_test.log"
-MARKER="cpufill_test_busyloop"   # distinctive string for pkill -f, so cancel-early can't hit unrelated processes
+MARKER="cpufill_test_busyloop"   # kept as a human-readable log/marker string only --
+                                  # no longer used for pkill -f matching, see PIDFILE below
+PIDFILE="/tmp/fault_cpufill.pid" # matches stop_fault.sh's /tmp/fault_<name>.pid
+                                  # convention, so ./stop_fault.sh cpufill <host> works
 
 if [ "$TARGET_PCT" -lt 1 ] || [ "$TARGET_PCT" -gt 100 ]; then
     echo "ERROR: <target_percent> must be between 1 and 100." >&2
@@ -94,9 +97,18 @@ sh -c '
 
   END_TS=\$(( \$(date +%s) + DURATION_MIN * 60 ))
 
+  PIDFILE="${PIDFILE}"
+  CURRENT_YPID_FILE="/tmp/\${MARKER}.current_ypid"
+
   if [ "\$TARGET_PCT" -ge "\$MAXLOAD_THRESHOLD_PCT" ]; then
     echo "[\$(date +%H:%M:%S)] target >= \${MAXLOAD_THRESHOLD_PCT}%, running continuous max-load (no duty cycling)" >> "\$LOGFILE"
-    ( echo \$\$ > /tmp/\${MARKER}.pid; exec yes ) > /dev/null 2>&1 &
+    (
+      trap "kill \\\$YPID 2>/dev/null; rm -f \$CURRENT_YPID_FILE; exit 0" TERM INT
+      yes > /dev/null 2>&1 &
+      YPID=\$!
+      echo \$YPID > "\$CURRENT_YPID_FILE"
+      wait \$YPID
+    ) &
   else
     BUSY_SEC=\$(( TARGET_PCT / 10 ))
     [ "\$BUSY_SEC" -lt 1 ] && BUSY_SEC=1
@@ -104,25 +116,37 @@ sh -c '
     SLEEP_SEC=\$(( 10 - BUSY_SEC ))
     echo "[\$(date +%H:%M:%S)] duty-cycling: busy=\${BUSY_SEC}s / sleep=\${SLEEP_SEC}s per 10s cycle" >> "\$LOGFILE"
     (
-      echo \$\$ > /tmp/\${MARKER}.pid
+      trap "kill \\\$YPID 2>/dev/null; rm -f \$CURRENT_YPID_FILE; exit 0" TERM INT
       while true; do
         yes > /dev/null 2>&1 &
         YPID=\$!
-        sleep \$BUSY_SEC
+        echo \$YPID > "\$CURRENT_YPID_FILE"
+        sleep \$BUSY_SEC &
+        wait \$!
         kill \$YPID 2>/dev/null
         wait \$YPID 2>/dev/null
-        sleep \$SLEEP_SEC
+        rm -f "\$CURRENT_YPID_FILE"
+        sleep \$SLEEP_SEC &
+        wait \$!
       done
-    ) > /dev/null 2>&1 &
+    ) &
   fi
   DRIVER_PID=\$!
+  echo \$DRIVER_PID > "\$PIDFILE"
 
-  sleep \$((DURATION_MIN * 60))
+  sleep \$((DURATION_MIN * 60)) &
+  wait \$!
 
+  # Auto-cleanup (normal completion, not an early cancel): TERM the driver,
+  # which via its own trap also kills whatever yes child is currently
+  # running -- no pkill dependency anywhere in this path.
   kill \$DRIVER_PID 2>/dev/null || true
-  pkill -f "\$MARKER" 2>/dev/null || true
-  pkill -f "^yes\$" 2>/dev/null || true
-  rm -f "/tmp/\${MARKER}.pid"
+  sleep 1
+  if [ -f "\$CURRENT_YPID_FILE" ]; then
+    kill "\$(cat \$CURRENT_YPID_FILE)" 2>/dev/null || true
+    rm -f "\$CURRENT_YPID_FILE"
+  fi
+  rm -f "\$PIDFILE"
 
   echo "[\$(date +%H:%M:%S)] auto-cleanup complete: CPU load generator stopped" >> "\$LOGFILE"
 ' > ${LOGFILE} 2>&1 < /dev/null &
@@ -158,7 +182,8 @@ fi
 echo ""
 echo "To cancel early instead of waiting for auto-cleanup:"
 if [ -n "$REMOTE_TARGET" ]; then
-    echo "  ssh ${REMOTE_TARGET} \"pkill -f '${MARKER}'; pkill -f '^yes\$'\""
+    echo "  ./stop_fault.sh cpufill ${REMOTE_TARGET}"
 else
-    echo "  pkill -f '${MARKER}'; pkill -f '^yes\$'"
+    echo "  kill \$(cat ${PIDFILE}) 2>/dev/null; rm -f ${PIDFILE}"
+    echo "  (stop_fault.sh assumes an SSH target; for local runs, use the kill command above)"
 fi
