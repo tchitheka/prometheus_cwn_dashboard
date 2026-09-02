@@ -64,6 +64,12 @@ DEFAULT_DOMAIN="cwn-fault-test.invalid"   # RFC 2606: .invalid is reserved,
                                            # guaranteed to never resolve
 QUERY_INTERVAL_SECONDS=2                  # time between individual queries
 LOG_FILE="${DNS_FAULT_TEST_LOG:-/tmp/dns_fault_test.log}"
+PIDFILE="${DNS_FAULT_TEST_PIDFILE:-/tmp/fault_dns.pid}"   # matches stop_fault.sh's
+                                           # /tmp/fault_<name>.pid convention, so
+                                           # ./stop_fault.sh dns <host> finds this
+                                           # regardless of whether the loop ends up
+                                           # orphaned by a dropped/interrupted SSH
+                                           # session
 
 usage() {
   echo "Usage: $0 <minutes> [user@remote_host] [wrong_domain]" >&2
@@ -97,6 +103,13 @@ run_query_loop() {
   # $1 = minutes, $2 = domain, $3 = log file
   local minutes="$1" domain="$2" log="$3"
   local end_ts count=0 token query_name resolver=""
+
+  # Record our own PID immediately, on whichever host is actually running
+  # this loop, and clean it up on any exit path -- normal completion,
+  # SIGTERM (via stop_fault.sh), or SIGINT -- so a stale pidfile never
+  # outlives the process it names.
+  echo "$$" > "$PIDFILE"
+  trap 'rm -f "$PIDFILE"; exit 0' TERM INT EXIT
 
   if command -v dig >/dev/null 2>&1; then
     resolver="dig"
