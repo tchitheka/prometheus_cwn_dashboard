@@ -25,6 +25,9 @@ sudo ./wan_packet_loss_test.sh 15 5 &
 
 
 DNS — "Name Resolution (DNS Health)" panel (bands: <1% green, 1-5% orange, >5% red)
+# ./dns_fault_test.sh 5 takondwa@192.168.1.11 my-broken-test.example
+#./stop_fault.sh all takondwa@192.168.1.11
+
 ./dns_fault_test.sh 5                            # local, default .invalid domain
 ./dns_fault_test.sh 5 takondwa@192.168.1.11      # from a station (needed — see note below)
 ./dns_fault_test.sh 5 takondwa@192.168.1.11 broken.example   # custom domain
@@ -36,6 +39,9 @@ Memory — "Memory pressure" panel (bands: >20% available green, 10-20% orange, 
 
 
 CPU — "AP Resource Health" panel (bands: <70% green, 70-90% orange, >90% red
+./cpufill_test.sh 95 5 root@192.168.1.100
+./stop_fault.sh all root@192.168.1.100
+
 ./cpufill_test.sh 80 10 192.168.1.100            # ~80% avg load (orange), hold 10 min
 ./cpufill_test.sh 95 5 192.168.1.100             # continuous max-load (red), hold 5 min
 
