@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phase Three Task Logger</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --border:#d7dbe0; --text:#1c1e21;
+    --muted:#666b72; --accent:#1f4e79; --accent2:#2e75b6;
+    --green:#2e7d32; --orange:#c9971c; --red:#a33d2e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--accent);color:#fff;padding:14px 22px;}
+  header h1{margin:0;font-size:19px;}
+  header p{margin:4px 0 0;font-size:12.5px;color:#cfe0f0;}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 22px 60px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 18px;margin-bottom:18px;}
+  .card h2{margin:0 0 10px;font-size:14px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;}
+  label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 3px;}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:5px;font-size:14px;
+    font-family:inherit;background:#fff;
+  }
+  textarea{min-height:60px;resize:vertical;}
+  .row{display:flex;gap:10px;}
+  .row > div{flex:1;}
+  button{cursor:pointer;border:none;border-radius:6px;padding:9px 16px;font-size:13.5px;font-weight:600;}
+  .btn-primary{background:var(--accent2);color:#fff;}
+  .btn-primary:hover{background:var(--accent);}
+  .btn-stop{background:var(--red);color:#fff;}
+  .btn-ghost{background:#eceff2;color:var(--text);}
+  .btn-ghost:hover{background:#e0e3e7;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .timer{font-size:56px;font-weight:700;text-align:center;padding:14px 0;font-variant-numeric:tabular-nums;}
+  .timer.warn{color:var(--orange);}
+  .timer.over{color:var(--red);}
+  .capline{text-align:center;font-size:12px;color:var(--muted);margin-top:-8px;margin-bottom:10px;}
+  .btnrow{display:flex;gap:10px;justify-content:center;margin-top:6px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;}
+  th,td{border:1px solid var(--border);padding:5px 7px;text-align:left;}
+  th{background:#eef2f6;color:var(--accent);}
+  tr:nth-child(even){background:#fafbfc;}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff;}
+  .pill.ok{background:var(--green);}
+  .pill.no{background:var(--red);}
+  .small{font-size:11.5px;color:var(--muted);}
+  .footerbar{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+  .count{font-size:12.5px;color:var(--muted);}
+  .badge-cat{font-size:10.5px;padding:1px 6px;border-radius:8px;background:#e3ecfa;color:var(--accent2);margin-left:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Phase Three &mdash; Task Timer &amp; Detection Logger</h1>
+  <p>Researcher-operated. Runs independently of the dashboard under test &mdash; does not modify Condition A or Condition B.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Session Setup</h2>
+    <div class="row">
+      <div>
+        <label>Participant ID</label>
+        <input type="text" id="pid" placeholder="e.g. P07">
+      </div>
+      <div>
+        <label>Condition</label>
+        <select id="condition">
+          <option value="A">Condition A (Prioritised)</option>
+          <option value="B">Condition B (Baseline)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Discrete-indicator timeout cap (seconds)</label>
+        <input type="number" id="capDiscrete" value="120" min="10">
+      </div>
+      <div>
+        <label>Continuous-indicator timeout cap (seconds)</label>
+        <input type="number" id="capContinuous" value="450" min="10">
+      </div>
+    </div>
+    <p class="small">Set these once, ideally from pilot data, before the first real session. Keep identical across both conditions for every participant.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Current Task</h2>
+      <label>Task (fault indicator induced, or catch trial)</label>
+      <select id="taskSelect"></select>
+      <div id="taskMeta" class="small" style="margin-top:6px;"></div>
+
+      <div class="timer" id="timerDisplay">00:00</div>
+      <div class="capline" id="capLine"></div>
+
+      <div class="btnrow">
+        <button class="btn-primary" id="startBtn">Start (fault introduced)</button>
+        <button class="btn-stop" id="stopBtn" disabled>Stop (participant reported)</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Outcome</h2>
+      <label>What did the participant say they found? (select the indicator they named)</label>
+      <select id="reportedIndicator"></select>
+
+      <label>Researcher judgement: was the participant's description of what it means also correct?</label>
+      <select id="descriptionCorrect">
+        <option value="">-- not yet judged --</option>
+        <option value="yes">Yes, correctly described</option>
+        <option value="no">No / vague / incorrect</option>
+        <option value="na">N/A (no detection / catch trial correctly rejected)</option>
+      </select>
+
+      <label>Observation notes (hesitation, confusion, wrong panel checked first, etc.)</label>
+      <textarea id="notes"></textarea>
+
+      <div class="btnrow">
+        <button class="btn-primary" id="logBtn" disabled>Log this trial</button>
+        <button class="btn-ghost" id="resetBtn">Reset trial (discard)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Logged Trials <span class="count" id="rowCount">(0)</span></h2>
+    <div style="overflow-x:auto;">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Participant</th><th>Condition</th><th>Task</th><th>Type</th>
+            <th>Reported As</th><th>Correct Indicator?</th><th>Desc. Correct?</th>
+            <th>Final Correct</th><th>TTD (s)</th><th>Timed Out?</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <div class="footerbar">
+      <button class="btn-primary" id="downloadBtn">Download CSV</button>
+      <button class="btn-ghost" id="clearBtn">Clear all logged trials</button>
+      <span class="small">CSV includes every field below plus timestamps; keep a session backup by downloading periodically, not only at the end.</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- indicator list, matching Table sus-indicators, with continuous/discrete classification ----
+const INDICATORS = [
+  {name:"Bandwidth saturation", type:"continuous"},
+  {name:"DNS resolution failures", type:"discrete"},
+  {name:"Traffic classification & accounting", type:"mixed"},
+  {name:"Wireless airtime saturation", type:"continuous"},
+  {name:"Packet loss & jitter", type:"mixed"},
+  {name:"Latency-driven QoE degradation", type:"continuous"},
+  {name:"Device resource exhaustion", type:"continuous"},
+  {name:"DHCP allocation failures", type:"discrete"},
+  {name:"Wireless signal degradation", type:"continuous"},
+  {name:"Device & link availability", type:"discrete"},
+  {name:"CATCH TRIAL (no fault induced)", type:"catch"},
+];
+
+const taskSelect = document.getElementById('taskSelect');
+const reportedIndicator = document.getElementById('reportedIndicator');
+INDICATORS.forEach(ind => {
+  const opt1 = document.createElement('option');
+  opt1.value = ind.name; opt1.textContent = ind.name + "  [" + ind.type + "]";
+  taskSelect.appendChild(opt1);
+});
+const reportedOptions = INDICATORS.map(i => i.name).concat(["NONE / NOT DETECTED", "OTHER / WRONG PANEL"]);
+reportedOptions.forEach(name => {
+  const opt = document.createElement('option');
+  opt.value = name; opt.textContent = name;
+  reportedIndicator.appendChild(opt);
+});
+
+function getInd(name){ return INDICATORS.find(i => i.name === name); }
+function capFor(type){
+  const discrete = parseInt(document.getElementById('capDiscrete').value, 10) || 120;
+  const cont = parseInt(document.getElementById('capContinuous').value, 10) || 450;
+  if(type === "continuous") return cont;
+  if(type === "discrete" || type === "catch") return discrete;
+  return Math.max(discrete, cont); // 'mixed' -> use the more generous cap by default, adjust if you decide otherwise
+}
+
+function updateTaskMeta(){
+  const ind = getInd(taskSelect.value);
+  document.getElementById('taskMeta').innerHTML =
+    'Category: <b>' + ind.type + '</b> &nbsp;|&nbsp; Timeout cap: <b>' + capFor(ind.type) + 's</b>';
+  document.getElementById('capLine').textContent = 'Cap: ' + capFor(ind.type) + 's';
+}
+taskSelect.addEventListener('change', updateTaskMeta);
+document.getElementById('capDiscrete').addEventListener('input', updateTaskMeta);
+document.getElementById('capContinuous').addEventListener('input', updateTaskMeta);
+updateTaskMeta();
+
+// ---- timer logic ----
+let timerInterval = null;
+let startTime = null;
+let elapsedAtStop = null;
+let timedOut = false;
+let activeCap = 0;
+let startTimestampISO = null;
+let stopTimestampISO = null;
+
+function fmt(sec){
+  const m = Math.floor(sec/60).toString().padStart(2,'0');
+  const s = Math.floor(sec%60).toString().padStart(2,'0');
+  return m+":"+s;
+}
+
+function tick(){
+  const now = Date.now();
+  const elapsed = (now - startTime)/1000;
+  const display = document.getElementById('timerDisplay');
+  display.textContent = fmt(elapsed);
+  display.className = 'timer' + (elapsed >= activeCap ? ' over' : (elapsed >= activeCap*0.8 ? ' warn' : ''));
+  if(elapsed >= activeCap){
+    // auto-timeout
+    timedOut = true;
+    elapsedAtStop = activeCap;
+    stopTimer(true);
+  }
+}
+
+function startTimer(){
+  const ind = getInd(taskSelect.value);
+  activeCap = capFor(ind.type);
+  startTime = Date.now();
+  startTimestampISO = new Date(startTime).toISOString();
+  timedOut = false;
+  elapsedAtStop = null;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('logBtn').disabled = true;
+  timerInterval = setInterval(tick, 200);
+}
+
+function stopTimer(auto){
+  clearInterval(timerInterval);
+  const now = Date.now();
+  stopTimestampISO = new Date(now).toISOString();
+  if(!auto){
+    elapsedAtStop = (now - startTime)/1000;
+  }
+  document.getElementById('timerDisplay').textContent = fmt(elapsedAtStop) + (timedOut ? "  (TIMED OUT)" : "");
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('logBtn').disabled = false;
+  if(timedOut){
+    reportedIndicator.value = "NONE / NOT DETECTED";
+    document.getElementById('descriptionCorrect').value = "na";
+  }
+}
+
+document.getElementById('startBtn').addEventListener('click', startTimer);
+document.getElementById('stopBtn').addEventListener('click', () => stopTimer(false));
+
+// ---- logging ----
+let rows = [];
+let rowNum = 0;
+
+document.getElementById('logBtn').addEventListener('click', () => {
+  const pid = document.getElementById('pid').value.trim() || "(unset)";
+  const condition = document.getElementById('condition').value;
+  const ind = getInd(taskSelect.value);
+  const reported = reportedIndicator.value;
+  const descCorrect = document.getElementById('descriptionCorrect').value;
+  const notes = document.getElementById('notes').value.trim();
+
+  const isCatch = ind.type === "catch";
+  const correctIndicator = isCatch
+      ? (reported === "NONE / NOT DETECTED") // correct rejection
+      : (reported === ind.name);
+  const finalCorrect = isCatch
+      ? correctIndicator
+      : (correctIndicator && descCorrect === "yes");
+  const falseAlarm = isCatch && reported !== "NONE / NOT DETECTED";
+
+  rowNum++;
+  rows.push({
+    n: rowNum, pid, condition, task: ind.name, type: ind.type,
+    reported, correctIndicator, descCorrect, finalCorrect, falseAlarm,
+    ttd: (finalCorrect ? elapsedAtStop.toFixed(1) : ""), // TTD only meaningful for genuine correct detections
+    rawElapsed: elapsedAtStop.toFixed(1),
+    timedOut, capUsed: activeCap,
+    startISO: startTimestampISO, stopISO: stopTimestampISO,
+    notes
+  });
+
+  renderTable();
+  // reset for next trial
+  document.getElementById('logBtn').disabled = true;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('notes').value = "";
+  reportedIndicator.value = INDICATORS[0].name;
+  document.getElementById('descriptionCorrect').value = "";
+  document.getElementById('timerDisplay').textContent = "00:00";
+  document.getElementById('timerDisplay').className = "timer";
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  clearInterval(timerInterval);
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('logBtn').disabled = true;
+  document.getElementById('timerDisplay').textContent = "00:00";
+  document.getElementById('timerDisplay').className = "timer";
+  document.getElementById('notes').value = "";
+});
+
+function renderTable(){
+  const body = document.getElementById('logBody');
+  body.innerHTML = "";
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>'+r.n+'</td><td>'+r.pid+'</td><td>'+r.condition+'</td><td>'+r.task+'</td>'+
+      '<td><span class="badge-cat">'+r.type+'</span></td>'+
+      '<td>'+r.reported+'</td>'+
+      '<td>'+(r.correctIndicator ? '<span class="pill ok">yes</span>' : '<span class="pill no">no</span>')+'</td>'+
+      '<td>'+(r.descCorrect || '-')+'</td>'+
+      '<td>'+(r.finalCorrect ? '<span class="pill ok">DAR=1</span>' : '<span class="pill no">DAR=0</span>')+'</td>'+
+      '<td>'+(r.ttd || '&gt;'+r.capUsed)+'</td>'+
+      '<td>'+(r.timedOut ? '<span class="pill no">yes</span>' : 'no')+'</td>'+
+      '<td>'+r.notes+'</td>';
+    body.appendChild(tr);
+  });
+  document.getElementById('rowCount').textContent = '('+rows.length+')';
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if(confirm('Clear all logged trials? This cannot be undone (download CSV first if needed).')){
+    rows = []; rowNum = 0; renderTable();
+  }
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const headers = ["trial_n","participant_id","condition","task_indicator","indicator_category",
+    "reported_indicator","correct_indicator_named","description_correct","false_alarm_catch_trial",
+    "final_correct_DAR","ttd_seconds","raw_elapsed_seconds","timed_out","cap_used_seconds",
+    "start_timestamp","stop_timestamp","notes"];
+  const csvRows = [headers.join(",")];
+  rows.forEach(r => {
+    const vals = [r.n, r.pid, r.condition, r.task, r.type, r.reported, r.correctIndicator,
+      r.descCorrect, r.falseAlarm, r.finalCorrect, r.ttd, r.rawElapsed, r.timedOut, r.capUsed,
+      r.startISO, r.stopISO, '"'+(r.notes||'').replace(/"/g,'""')+'"'];
+    csvRows.push(vals.join(","));
+  });
+  const blob = new Blob([csvRows.join("\n")], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const pid = document.getElementById('pid').value.trim() || "session";
+  a.href = url;
+  a.download = "phase3_log_" + pid + "_" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
